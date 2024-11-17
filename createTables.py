@@ -143,7 +143,7 @@ def createJobTable(cursor: sqlite3.Cursor):
         contract_id INTEGER DEFAULT NULL,
         mileage DECIMAL(10, 2) NOT NULL,
         charge DECIMAL(10, 2) NOT NULL,
-        status VARCHAR(20) CHECK(status IN ('PENDING', 'COMPLETED', 'FAILED')) NOT NULL,
+        status VARCHAR(20) CHECK(status IN ('PENDING', 'COMPLETED', 'FAILED')) NOT NULL DEFAULT 'PENDING',
         failure_reason TEXT DEFAULT NULL,
         pickup_date DATE NOT NULL,
         dropoff_date DATE NOT NULL,
