@@ -38,7 +38,7 @@ def createStaffTable(cursor: sqlite3.Cursor):
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS staff (
         staff_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL UNIQUE,
         office_id INTEGER NOT NULL,
         role VARCHAR(20) CHECK(role IN ('MANAGER', 'STAFF')) NOT NULL DEFAULT 'STAFF',
         NIN VARCHAR(9) UNIQUE,
@@ -53,8 +53,8 @@ def createOwnerTable(cursor: sqlite3.Cursor):
     CREATE TABLE IF NOT EXISTS owner (
         owner_id INTEGER PRIMARY KEY AUTOINCREMENT,
         office_id INTEGER NOT NULL,
-        user_id INTEGER NOT NULL,
-        NIN VARCHAR(9) UNIQUE,
+        user_id INTEGER NOT NULL UNIQUE,
+        NIN VARCHAR(9) UNIQUE NOT NULL,
         FOREIGN KEY (office_id) REFERENCES office(office_id) ON DELETE NO ACTION ON UPDATE CASCADE,
         FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE NO ACTION ON UPDATE CASCADE
     )
