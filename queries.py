@@ -125,10 +125,18 @@ def getTotalTaxis(cursor: sqlite3.Cursor) -> int:
 
 def getTaxis(cursor: sqlite3.Cursor) -> list:
     query = """
-    SELECT * FROM taxi;
+    SELECT taxi.taxi_id, taxi.registration_number, taxi.capacity, user.name as ownerName FROM taxi JOIN owner ON taxi.owner_id = owner.owner_id JOIN user ON owner.user_id = user.user_id;
     """
     cursor.execute(query)
     return cursor.fetchall()
+
+def getTaxiDetails(cursor: sqlite3.Cursor, taxi_id: int) -> dict:
+    query = """
+    SELECT taxi.taxi_id, taxi.registration_number, taxi.capacity, user.name as ownerName FROM taxi JOIN owner ON taxi.owner_id = owner.owner_id JOIN user ON owner.user_id = user.user_id
+    WHERE taxi_id = ?;
+    """
+    cursor.execute(query, (taxi_id,))
+    return cursor.fetchone()
 
 # Contracts
 def getTotalContracts(cursor: sqlite3.Cursor) -> int:
@@ -138,6 +146,22 @@ def getTotalContracts(cursor: sqlite3.Cursor) -> int:
     cursor.execute(query)
     return cursor.fetchone()[0]
 
+def getContracts(cursor: sqlite3.Cursor) -> list:
+    query = """
+    SELECT contract.contract_id, contract.signed_on, contract.no_jobs, contract.flat_fees, office.office_id, business_client.business_client_id FROM contract JOIN office ON contract.office_id = office.office_id JOIN business_client ON contract.business_client_id = business_client.business_client_id
+    """
+    cursor.execute(query)
+    return cursor.fetchall()
+
+def getContractDetails(cursor: sqlite3.Cursor, contract_id: int) -> dict:
+    query = """
+    SELECT contract.contract_id, contract.signed_on, contract.no_jobs, contract.flat_fees, office.office_id, business_client.business_client_id FROM contract JOIN office ON contract.office_id = office.office_id JOIN business_client ON contract.business_client_id = business_client.business_client_id
+    WHERE contract_id = ?;
+    """
+    cursor.execute(query, (contract_id,))
+    return cursor.fetchone()
+
+
 # Clients
 def getTotalClients(cursor: sqlite3.Cursor) -> int:
     query = """
@@ -146,6 +170,41 @@ def getTotalClients(cursor: sqlite3.Cursor) -> int:
     cursor.execute(query)
     return cursor.fetchone()[0]
 
+def getBusinessClients(cursor: sqlite3.Cursor) -> list:
+    query = """
+    SELECT business_client_id, hst_number, address.street, address.city, address.postcode, address.country
+      FROM business_client 
+        JOIN address ON business_client.address_id = address.address_id;
+    """
+    cursor.execute(query)
+    return cursor.fetchall()
+
+def getBusinessClientDetails(cursor: sqlite3.Cursor, business_client_id: int) -> dict:
+    query = """
+    SELECT business_client_id, hst_number, address.street, address.city, address.postcode, address.country
+      FROM business_client 
+        JOIN address ON business_client.address_id = address.address_id
+      WHERE business_client_id = ?;
+    """
+    cursor.execute(query, (business_client_id,))
+    return cursor.fetchone()
+
+def getPrivateClients(cursor: sqlite3.Cursor) -> list:
+    query = """
+    SELECT * FROM private_client;
+    """
+    cursor.execute(query)
+    return cursor.fetchall()
+
+def getPrivateClientDetails(cursor: sqlite3.Cursor, private_client_id: int) -> dict:
+    query = """
+    SELECT * FROM private_client WHERE private_client_id = ?;
+    """
+    cursor.execute(query, (private_client_id,))
+    return cursor.fetchone()
+
+
+
 # Active Jobs
 def getTotalActiveJobs(cursor: sqlite3.Cursor) -> int:
     query = """
@@ -153,6 +212,29 @@ def getTotalActiveJobs(cursor: sqlite3.Cursor) -> int:
     """
     cursor.execute(query)
     return cursor.fetchone()[0]
+
+def getJobs(cursor: sqlite3.Cursor) -> list:
+    query = """
+    SELECT job.job_id, job.client_id, job.contract_id, job.mileage, job.charge, job.status, job.pickup_date, job.dropoff_date, driverUser.name as driverName, address.street, address.city, address.postcode, address.country
+    FROM job 
+    JOIN address ON address.address_id = job.address_id
+    JOIN driver ON driver.driver_id = job.driver_id
+    JOIN user driverUser ON driverUser.user_id = driver.user_id;
+    """
+    cursor.execute(query)
+    return cursor.fetchall()
+
+def getJobDetails(cursor: sqlite3.Cursor, job_id: int) -> dict:
+    query = """
+    SELECT job.job_id, job.client_id, job.contract_id, job.mileage, job.charge, job.status, job.pickup_date, job.dropoff_date, driverUser.name as driverName, address.street, address.city, address.postcode, address.country
+    FROM job 
+    JOIN address ON address.address_id = job.address_id
+    JOIN driver ON driver.driver_id = job.driver_id
+    JOIN user driverUser ON driverUser.user_id = driver.user_id
+    WHERE job_id = ?;
+    """
+    cursor.execute(query, (job_id,))
+    return cursor.fetchone()
 
 # Recent Activity
 def getRecentActivity(cursor: sqlite3.Cursor) -> list:
