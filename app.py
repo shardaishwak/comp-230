@@ -8,6 +8,7 @@ from queries import *
 from contextlib import closing
 from helpers import *
 from createObjects import *
+from updateQueries import *
 import datetime
 
 
@@ -23,9 +24,12 @@ def get_input_values(entity_name, fields):
 
     return values.values()
 
+STAFF_FIELDS = ["role"]
 
-
-
+DRIVER_FIELDS = ["NIN"]
+USER_FIELDS = ["name", "gender", "date_of_birth", "phone_number"]
+JOB_UPDATABLE_FIELDS = ["status", "failure_reason", "pickup_date", "dropoff_date", "charge", "mileage"]
+ADDRESS_FIELDS = ["street", "city", "postcode", "country"]
 
 
 # Utility for displaying tables
@@ -493,71 +497,311 @@ def total_income_by_date_at_office(cursor: sqlite3.Cursor):
         spinner.ok("✔")
     print(f"Total income from Office {office_id} on {date}: {total_income}")
 
+# UPDATES
+
+def update_job_prompt(cursor: sqlite3.Cursor):
+    job_id = input("Enter the Job ID to update: ").strip()
+    
+    cursor.execute("SELECT * FROM job WHERE job_id = ?", (job_id,))
+    job = cursor.fetchone()
+    if not job:
+        spinner.fail("✖ The job was not found.")
+        return
+
+    print("Fields you can update:")
+    for field in JOB_UPDATABLE_FIELDS:
+        print(f"- {field}")
+
+    updates = {}
+    while True:
+        field = input("Enter the field to update (or 'done' to finish): ").strip()
+        if field.lower() == "done":
+            break
+        if field not in JOB_UPDATABLE_FIELDS:
+            spinner.fail(f"Invalid field. Choose from: {', '.join(JOB_UPDATABLE_FIELDS)}")
+            continue
+        value = input(f"✖ Enter the new value for {field}: ").strip()
+        updates[field] = value
+
+    if not updates:
+        print("No updates provided.")
+        return
+
+    with yaspin(text="Updating job...", color="cyan") as spinner:
+        success = updateJob(cursor, job_id, updates)
+        if success:
+            spinner.ok("✔")
+            print("Job updated successfully.")
+        else:
+            spinner.fail("✖ Failed to update the job.")
+
+
+def update_driver_prompt(cursor: sqlite3.Cursor):
+    driver_id = input("Enter the Driver ID to update: ").strip()
+
+    cursor.execute("SELECT * FROM driver WHERE driver_id = ?", (driver_id,))
+    driver = cursor.fetchone()
+    if not driver:
+        print(f"No driver found with ID {driver_id}.")
+        return
+
+    cursor.execute("""
+        SELECT user.user_id, address.address_id 
+        FROM driver 
+        JOIN user ON driver.user_id = user.user_id
+        JOIN address ON user.address_id = address.address_id
+        WHERE driver.driver_id = ?
+    """, (driver_id,))
+    user_info = cursor.fetchone()
+    if not user_info:
+        print("Error: Unable to find associated user or address.")
+        return
+    user_id, address_id = user_info
+
+    print("Fields you can update:")
+    all_updatable_fields = DRIVER_FIELDS + USER_FIELDS + ADDRESS_FIELDS
+    for field in all_updatable_fields:
+        print(f"- {field}")
+
+    updates = {}
+    while True:
+        field = input("Enter the field to update (or 'done' to finish): ").strip()
+        if field.lower() == "done":
+            break
+        if field not in all_updatable_fields:
+            print(f"Invalid field. Choose from: {', '.join(all_updatable_fields)}")
+            continue
+        value = input(f"Enter the new value for {field}: ").strip()
+        updates[field] = value
+
+    if not updates:
+        print("No updates provided.")
+        return
+
+    driver_updates = {k: v for k, v in updates.items() if k in DRIVER_FIELDS}
+    user_updates = {k: v for k, v in updates.items() if k in USER_FIELDS}
+    address_updates = {k: v for k, v in updates.items() if k in ADDRESS_FIELDS}
+
+    if driver_updates:
+        new_nin = driver_updates.get("NIN")
+        with yaspin(text="Updating NIN...", color="cyan") as spinner:
+            success = updateDriverNin(cursor, driver_id, new_nin)
+            if success:
+                spinner.ok("✔")
+                print("Driver NIN updated successfully.")
+            else:
+                spinner.fail("✖ Failed to update driver NIN.")
+
+    if user_updates:
+        with yaspin(text="Updating user fields...", color="cyan") as spinner:
+            success = updateUser(cursor, user_id, user_updates)
+            if success:
+                spinner.ok("✔")
+                print("User fields updated successfully.")
+            else:
+                spinner.fail("✖ Failed to update user fields.")
+
+    if address_updates:
+        with yaspin(text="Updating address fields...", color="cyan") as spinner:
+            success = updateAddress(cursor, address_id, address_updates)
+            if success:
+                spinner.ok("✔")
+                print("Address fields updated successfully.")
+            else:
+                spinner.fail("✖ Failed to update address fields.")
+
+
+def update_staff_prompt(cursor: sqlite3.Cursor):
+    staff_id = input("Enter the Staff ID to update: ").strip()
+
+    cursor.execute("SELECT * FROM staff WHERE staff_id = ?", (staff_id,))
+    staff = cursor.fetchone()
+    if not staff:
+        print(f"No staff found with ID {staff_id}.")
+        return
+
+    cursor.execute("""
+        SELECT user.user_id, address.address_id 
+        FROM staff 
+        JOIN user ON staff.user_id = user.user_id
+        JOIN address ON user.address_id = address.address_id
+        WHERE staff.staff_id = ?
+    """, (staff_id,))
+    user_info = cursor.fetchone()
+    if not user_info:
+        print("Error: Unable to find associated user or address.")
+        return
+    user_id, address_id = user_info
+
+    print("Fields you can update:")
+    all_updatable_fields = STAFF_FIELDS + USER_FIELDS + ADDRESS_FIELDS
+    for field in all_updatable_fields:
+        print(f"- {field}")
+
+    updates = {}
+    while True:
+        field = input("Enter the field to update (or 'done' to finish): ").strip()
+        if field.lower() == "done":
+            break
+        if field not in all_updatable_fields:
+            print(f"Invalid field. Choose from: {', '.join(all_updatable_fields)}")
+            continue
+        value = input(f"Enter the new value for {field}: ").strip()
+        updates[field] = value
+
+    if not updates:
+        print("No updates provided.")
+        return
+
+    staff_updates = {k: v for k, v in updates.items() if k in STAFF_FIELDS}
+    user_updates = {k: v for k, v in updates.items() if k in USER_FIELDS}
+    address_updates = {k: v for k, v in updates.items() if k in ADDRESS_FIELDS}
+
+    if staff_updates:
+        new_role = staff_updates.get("role")
+        with yaspin(text="Updating staff role...", color="cyan") as spinner:
+            success = updateStaff(cursor, staff_id, new_role)
+            if success:
+                spinner.ok("✔")
+                print("Staff role updated successfully.")
+            else:
+                spinner.fail("✖ Failed to update staff role.")
+
+    if user_updates:
+        with yaspin(text="Updating user fields...", color="cyan") as spinner:
+            success = updateUser(cursor, user_id, user_updates)
+            if success:
+                spinner.ok("✔")
+                print("User fields updated successfully.")
+            else:
+                spinner.fail("✖ Failed to update user fields.")
+
+    if address_updates:
+        with yaspin(text="Updating address fields...", color="cyan") as spinner:
+            success = updateAddress(cursor, address_id, address_updates)
+            if success:
+                spinner.ok("✔")
+                print("Address fields updated successfully.")
+            else:
+                spinner.fail("✖ Failed to update address fields.")
+
 # Main Application Loop
 def display_menu():
     """
-    Display the list of available commands to the user.
+    Display the list of available commands to the user with a fancy design.
     """
-    print("\n--- Available Commands ---")
-    print("dashboard - View dashboard overview")
+    print("\n" + "═" * 40)
+    print("💼  🚖  COMMAND MENU  🚖  💼".center(40))
+    print("═" * 40)
 
-    print("offices - Manage and view office details")
-    print("offices get - Get office details")
-    print("offices create - Create a new office")
+    sections = [
+        {
+            "title": "DASHBOARD",
+            "commands": [
+                "dashboard - View dashboard overview",
+            ],
+        },
+        {
+            "title": "OFFICES",
+            "commands": [
+                "offices - Manage and view office details",
+                "offices get - Get office details",
+                "offices create - Create a new office",
+            ],
+        },
+        {
+            "title": "STAFF",
+            "commands": [
+                "staff - Manage and view staff details",
+                "staff get - Get staff details",
+                "staff create - Create a new staff",
+                "staff update - Update staff details",
+            ],
+        },
+        {
+            "title": "DRIVERS",
+            "commands": [
+                "drivers - View list of drivers",
+                "drivers details - Get driver details",
+                "drivers create - Create a new driver",
+                "driver update - Update driver details",
+            ],
+        },
+        {
+            "title": "TAXIS",
+            "commands": [
+                "taxis - View list of taxis",
+                "taxis get - Get taxi details",
+                "taxis create - Create a new taxi",
+                "owner taxis - View list of taxis owned by an owner",
+            ],
+        },
+        {
+            "title": "OWNERS",
+            "commands": [
+                "owners - View list of owners",
+                "owners get - Get owner details",
+                "owners create - Create a new owner",
+            ],
+        },
+        {
+            "title": "CLIENTS",
+            "commands": [
+                "business clients - View list of clients",
+                "business clients get - Get client details",
+                "business clients create - Create a new client",
+                "private clients - View list of private clients",
+                "private clients get - Get private client details",
+                "private clients create - Create a new private client",
+            ],
+        },
+        {
+            "title": "CONTRACTS",
+            "commands": [
+                "contracts - View list of contracts",
+                "contracts get - Get contract details",
+                "contracts create - Create a new contract",
+            ],
+        },
+        {
+            "title": "JOBS",
+            "commands": [
+                "job - View list of jobs",
+                "job get - Get job details",
+                "job create - Create a new job",
+                "job finalized - Finalize a job",
+                "jobs today - View jobs scheduled for today",
+                "jobs driver - View jobs assigned to a driver",
+                "job finalize - Finalize a job",
+                "job failed - Mark a job as failed",
+                "jobs by status - View jobs by status: PENDING, COMPLETED, FAILED",
+                "job update - Update a job",
+            ],
+        },
+        {
+            "title": "INCOME",
+            "commands": [
+                "income office - Total income from an office",
+                "income driver - Total income from a driver",
+                "income date - Total income by date",
+            ],
+        },
+        {
+            "title": "SYSTEM",
+            "commands": [
+                "clear - Clear the screen",
+                "menu - Display this menu",
+                "quit - Exit the application",
+            ],
+        },
+    ]
 
-    print("staff - Manage and view staff details")
-    print("staff get - Get staff details")
-    print("staff create - Create a new staff")
-
-    print("drivers - View list of drivers")
-    print("drivers details - Get driver details")
-    print("drivers create - Create a new driver")
-
-    print("taxis - View list of taxis")
-    print("taxis get - Get taxi details")
-    print("taxis create - Create a new taxi")
-
-    print("owners - View list of owners")
-    print("owners get - Get owner details")
-    print("owners create - Create a new owner")
-
-    print("business clients - View list of clients")
-    print("business clients get - Get client details")
-    print("business clients create - Create a new client")
-
-    print("private clients - View list of private clients")
-    print("private clients get - Get private client details")
-    print("private clients create - Create a new private client")
-
-    print("contracts - View list of contracts")
-    print("contracts get - Get contract details")
-    print("contracts create - Create a new contract")
-
-    print("job - View list of jobs")
-    print("job get - Get job details")
-    print("job create - Create a new job")
-    print("job finalized - Finalize a job")
-
-    print("---------------------------")
-
-    print("owner taxis - View list of taxis owned by an owner")
-    print("jobs today - View jobs scheduled for today")
-    print("jobs driver - View jobs assigned to a driver")
-    print("job finalize - Finalize a job")
-    print("job failed - Mark a job as failed")
-    print("jobs by status - View jobs by status: PENDING, COMPLETED, FAILED")
-    print("income office - Total income from an office")
-    print("income driver - Total income from a driver")
-    print("income date - Total income by date")
-
-
-    print("---------------------------")
-
-    print("clear - Clear the screen")
-    print("cmd - Display this menu")
-
-    print("4. quit - Exit the application")
-    print("---------------------------")
+    for section in sections:
+        print("\n📌 " + section["title"])
+        print("─" * len(section["title"]))
+        for command in section["commands"]:
+            print(f"   ➜ {command}")
+    print("\n" + "═" * 40)
 
 def main(cursor: sqlite3.Cursor):
     options = WordCompleter(
@@ -569,9 +813,11 @@ def main(cursor: sqlite3.Cursor):
             "staff",
             "staff get",
             "staff create",
+            "staff update",
             "drivers",
             "drivers get",
             "drivers create",
+            "driver update",
             "owners",
             "owners get",
             "owners create"
@@ -599,7 +845,8 @@ def main(cursor: sqlite3.Cursor):
             "income office",
             "income driver",
             "income date",
-            "cmd",
+            "job update",
+            "menu",
             "clear",
             "quit",
         ],
@@ -683,7 +930,13 @@ def main(cursor: sqlite3.Cursor):
             total_income_from_driver(cursor)
         elif user_input == "income date":
             total_income_by_date_at_office(cursor)
-        elif user_input == "cmd":
+        elif user_input == "job update":
+            update_job_prompt(cursor)
+        elif user_input == "driver update":
+            update_driver_prompt(cursor)
+        elif user_input == "staff update":
+            update_staff_prompt(cursor)
+        elif user_input == "menu":
             display_menu()
         elif user_input == "clear":
             os.system("clear")

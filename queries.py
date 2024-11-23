@@ -315,3 +315,6 @@ def getTotalIncomeByDateAtOffice(cursor: sqlite3.Cursor, office_id: int, date: s
     """
     cursor.execute(query, (office_id, date))
     return cursor.fetchone()[0]
+
+
+
