@@ -407,6 +407,92 @@ def job_create(cursor: sqlite3.Cursor):
 
     print(f"New job created with ID: {job_id}")
 
+# Owner Taxis
+def owner_taxis(cursor: sqlite3.Cursor):
+    owner_id = input(f"Enter the owner ID: ").strip()
+    with yaspin(text=f"Fetching taxis for Owner {owner_id}...", color="cyan") as spinner:
+        owner_taxis = getOwnerTaxis(cursor, owner_id)
+        if not owner_taxis:
+            spinner.fail(f"No taxis found for owner with ID {owner_id}.")
+            return
+        spinner.ok("✔")
+    display_table(data=owner_taxis, headers=[desc[0] for desc in cursor.description])
+
+# Jobs Today
+def jobs_today(cursor: sqlite3.Cursor):
+    with yaspin(text="Loading Jobs for Today...", color="cyan") as spinner:
+        jobs_today = getTodayJobs(cursor)
+        spinner.ok("✔")
+    display_table(data=jobs_today, headers=[desc[0] for desc in cursor.description])
+
+# Jobs Driver
+def jobs_driver(cursor: sqlite3.Cursor):
+    driver_id = input(f"Enter the driver ID: ").strip()
+    with yaspin(text=f"Fetching jobs for Driver {driver_id}...", color="cyan") as spinner:
+        driver_jobs = getDriverJobs(cursor, driver_id)
+        if not driver_jobs:
+            spinner.fail(f"No jobs found for driver with ID {driver_id}.")
+            return
+        spinner.ok("✔")
+    display_table(data=driver_jobs, headers=[desc[0] for desc in cursor.description])
+
+# Finalize job: id, mileage, charge
+def job_finalize(cursor: sqlite3.Cursor):
+    entity_id = input(f"Enter the job ID: ").strip()
+    mileage = input(f"Enter the mileage: ").strip()
+    charge = input(f"Enter the charge: ").strip()
+    with yaspin(text=f"Finalizing Job {entity_id}...", color="cyan") as spinner:
+        finalizeJob(cursor, entity_id, mileage, charge)
+        spinner.ok("✔")
+    print(f"Job {entity_id} finalized")
+
+
+# finalize job failed
+def job_failed(cursor: sqlite3.Cursor):
+    entity_id = input(f"Enter the job ID: ").strip()
+    reason = input(f"Enter the failure reason: ").strip()
+    with yaspin(text=f"Marking Job {entity_id} as failed ...", color="cyan") as spinner:
+        finalizeJobFailed(cursor, entity_id, reason)
+        spinner.ok("✔")
+    print(f"Job {entity_id} marked as failed")
+
+
+# Jobs by status
+def jobs_by_status(cursor: sqlite3.Cursor):
+    status = input(f"Enter the status: ").strip()
+    with yaspin(text=f"Fetching jobs with status {status}...", color="cyan") as spinner:
+        jobs = getJobsByStatus(cursor, status)
+        if not jobs:
+            spinner.fail(f"No jobs found with status {status}.")
+            return
+        spinner.ok("✔")
+    display_table(data=jobs, headers=[desc[0] for desc in cursor.description])
+
+# Total income from office
+def total_income_from_office(cursor: sqlite3.Cursor):
+    office_id = input(f"Enter the office ID: ").strip()
+    with yaspin(text=f"Fetching total income from Office {office_id}...", color="cyan") as spinner:
+        total_income = getTotalIncomeByOffice(cursor, office_id)
+        spinner.ok("✔")
+    print(f"Total income from Office {office_id}: {total_income}")
+
+# Total income from driver
+def total_income_from_driver(cursor: sqlite3.Cursor):
+    driver_id = input(f"Enter the driver ID: ").strip()
+    with yaspin(text=f"Fetching total income from Driver {driver_id}...", color="cyan") as spinner:
+        total_income = getTotalIncomeByDriver(cursor, driver_id)
+        spinner.ok("✔")
+    print(f"Total income from Driver {driver_id}: {total_income}")
+
+# Total income by date: user inputs YYYY-MM-DD
+def total_income_by_date_at_office(cursor: sqlite3.Cursor):
+    date = input(f"Enter the date (YYYY-MM-DD): ").strip()
+    office_id = input(f"Enter the office ID: ").strip()
+    with yaspin(text=f"Fetching total income from Office {office_id} on {date}...", color="cyan") as spinner:
+        total_income = getTotalIncomeByDateAtOffice(cursor, date, office_id)
+        spinner.ok("✔")
+    print(f"Total income from Office {office_id} on {date}: {total_income}")
+
 # Main Application Loop
 def display_menu():
     """
@@ -450,7 +536,22 @@ def display_menu():
     print("job - View list of jobs")
     print("job get - Get job details")
     print("job create - Create a new job")
+    print("job finalized - Finalize a job")
 
+    print("---------------------------")
+
+    print("owner taxis - View list of taxis owned by an owner")
+    print("jobs today - View jobs scheduled for today")
+    print("jobs driver - View jobs assigned to a driver")
+    print("job finalize - Finalize a job")
+    print("job failed - Mark a job as failed")
+    print("jobs by status - View jobs by status: PENDING, COMPLETED, FAILED")
+    print("income office - Total income from an office")
+    print("income driver - Total income from a driver")
+    print("income date - Total income by date")
+
+
+    print("---------------------------")
 
     print("clear - Clear the screen")
     print("cmd - Display this menu")
@@ -489,6 +590,15 @@ def main(cursor: sqlite3.Cursor):
             "jobs",
             "jobs get",
             "jobs create",
+            "owner taxis",
+            "jobs today",
+            "jobs driver",
+            "job finalize",
+            "job failed",
+            "jobs by status",
+            "income office",
+            "income driver",
+            "income date",
             "cmd",
             "clear",
             "quit",
@@ -555,6 +665,24 @@ def main(cursor: sqlite3.Cursor):
             job_details(cursor)
         elif user_input == "jobs create":
             job_create(cursor)
+        elif user_input == "owner taxis":
+            owner_taxis(cursor)
+        elif user_input == "jobs today":
+            jobs_today(cursor)
+        elif user_input == "jobs driver":
+            jobs_driver(cursor)
+        elif user_input == "job finalize":
+            job_finalize(cursor)
+        elif user_input == "job failed":
+            job_failed(cursor)
+        elif user_input == "jobs by status":
+            jobs_by_status(cursor)
+        elif user_input == "income office":
+            total_income_from_office(cursor)
+        elif user_input == "income driver":
+            total_income_from_driver(cursor)
+        elif user_input == "income date":
+            total_income_by_date_at_office(cursor)
         elif user_input == "cmd":
             display_menu()
         elif user_input == "clear":

@@ -243,3 +243,75 @@ def getRecentActivity(cursor: sqlite3.Cursor) -> list:
     """
     cursor.execute(query)
     return cursor.fetchall()
+
+
+# Get today jobs
+def getTodayJobs(cursor: sqlite3.Cursor) -> list:
+    query = """
+    SELECT job.*, address.street, address.city, address.postcode, address.country FROM job JOIN address ON address.address_id = job.address_id WHERE pickup_date = date('now') ORDER BY job_id DESC;
+    """
+    cursor.execute(query)
+    return cursor.fetchall()
+
+def getOwnerTaxis(cursor: sqlite3.Cursor, owner_id: int) -> list:
+    query = """
+    SELECT taxi.taxi_id, taxi.registration_number, taxi.capacity FROM taxi WHERE owner_id = ?;
+    """
+    cursor.execute(query, (owner_id,))
+    return cursor.fetchall()
+
+def getDriverJobs(cursor: sqlite3.Cursor, driver_id: int) -> list:
+    query = """
+    SELECT job.job_id, job.client_id, job.contract_id, job.mileage, job.charge, job.status, job.pickup_date, job.dropoff_date, address.street, address.city, address.postcode, address.country
+    FROM job 
+    JOIN address ON address.address_id = job.address_id
+    WHERE driver_id = ?;
+    """
+    cursor.execute(query, (driver_id,))
+    return cursor.fetchall()
+
+
+def finalizeJob(cursor: sqlite3.Cursor, job_id: int, mileage: int, charge: int) -> None:
+    query = """
+    UPDATE job SET status = 'COMPLETED', mileage = ?, charge = ? WHERE job_id = ?;
+    """
+    cursor.execute(query, (mileage, charge, job_id))
+
+def finalizeJobFailed(cursor: sqlite3.Cursor, job_id: int, failure_reason) -> None:
+    query = """
+    UPDATE job SET status = 'FAILED', failure_reason = ? WHERE job_id = ?;
+    """
+    cursor.execute(query, (failure_reason, job_id))
+
+def getJobsByStatus(cursor: sqlite3.Cursor, status: str) -> list:
+    query = """
+    SELECT job.job_id, job.client_id, job.contract_id, job.mileage, job.charge, job.status, job.pickup_date, job.dropoff_date, driverUser.name as driverName, address.street, address.city, address.postcode, address.country
+    FROM job 
+    JOIN address ON address.address_id = job.address_id
+    JOIN driver ON driver.driver_id = job.driver_id
+    JOIN user driverUser ON driverUser.user_id = driver.user_id
+    WHERE job.status = ?;
+    """
+    cursor.execute(query, (status,))
+    return cursor.fetchall()
+
+def getTotalIncomeByOffice(cursor: sqlite3.Cursor, office_id: int) -> int:
+    query = """
+    SELECT SUM(charge) FROM job WHERE office_id = ? AND status = 'COMPLETED';
+    """
+    cursor.execute(query, (office_id,))
+    return cursor.fetchone()[0]
+
+def getTotalIncomeByDriver(cursor: sqlite3.Cursor, driver_id: int) -> int:
+    query = """
+    SELECT SUM(charge) FROM job WHERE driver_id = ? AND status = 'COMPLETED';
+    """
+    cursor.execute(query, (driver_id,))
+    return cursor.fetchone()[0]
+
+def getTotalIncomeByDateAtOffice(cursor: sqlite3.Cursor, office_id: int, date: str) -> int:
+    query = """
+    SELECT SUM(charge) FROM job WHERE office_id = ? AND status = 'COMPLETED' AND pickup_date = ?;
+    """
+    cursor.execute(query, (office_id, date))
+    return cursor.fetchone()[0]
