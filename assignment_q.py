@@ -6,7 +6,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 def query1(cursor: sqlite3.Cursor):
     query = """
-        SELECT user.name, user.phone_number FROM user JOIN staff ON user.user_id = staff.user_id WHERE staff.role = 'MANAGER';
+        SELECT user.user_id, user.name, user.phone_number FROM user JOIN staff ON user.user_id = staff.user_id WHERE staff.role = 'MANAGER';
     """
 
     rows = cursor.execute(query).fetchall()
@@ -24,7 +24,7 @@ def query2(cursor: sqlite3.Cursor):
 
 def query3(cursor: sqlite3.Cursor):
     query = """
-        SELECT staff.office_id, Count(*) FROM staff GROUP BY staff.office_id;
+        SELECT staff.office_id, Count(*) as total FROM staff GROUP BY staff.office_id;
     """
 
     rows = cursor.execute(query).fetchall()
@@ -41,7 +41,7 @@ def query4(cursor: sqlite3.Cursor):
 def query5(cursor: sqlite3.Cursor):
     ## TODO: Create a taxi that has this registration number
     query = """
-        SELECT COUNT(*) FROM taxi WHERE taxi.registration_number LIKE '%W%';
+        SELECT COUNT(*) as total FROM taxi WHERE taxi.registration_number LIKE '%W%';
     """
 
     rows = cursor.execute(query).fetchall()
@@ -49,7 +49,7 @@ def query5(cursor: sqlite3.Cursor):
 
 def query6(cursor: sqlite3.Cursor):
     query = """
-       SELECT taxi.taxi_id, COUNT(*) FROM taxi JOIN driver ON driver.taxi_id = taxi.taxi_id GROUP BY taxi.taxi_id; 
+       SELECT taxi.taxi_id, COUNT(*) as total FROM taxi JOIN driver ON driver.taxi_id = taxi.taxi_id GROUP BY taxi.taxi_id; 
     """
 
     rows = cursor.execute(query).fetchall()
@@ -82,7 +82,7 @@ def query9(cursor: sqlite3.Cursor):
 
 def query10(cursor: sqlite3.Cursor):
     query = """
-        SELECT address.city , COUNT(*) from address JOIN user ON user.address_id = address.address_id JOIN private_client ON private_client.user_id = user.user_id GROUP BY address.city;
+        SELECT address.city , COUNT(*) as total from address JOIN user ON user.address_id = address.address_id JOIN private_client ON private_client.user_id = user.user_id GROUP BY address.city;
     """
 
     rows = cursor.execute(query).fetchall()

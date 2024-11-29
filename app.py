@@ -875,6 +875,8 @@ def main(cursor: sqlite3.Cursor):
         elif user_input == "drivers details":
             driver_details(cursor)
         elif user_input == "drivers get":
+            driver_details(cursor)
+        elif user_input == "drivers create":
             driver_create(cursor)
         elif user_input == "taxis":
             taxi_list(cursor)
